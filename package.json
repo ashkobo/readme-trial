@@ -1,0 +1,40 @@
+{
+  "name": "@ashkobo/readme-trial",
+  "version": "0.1.0",
+  "description": "Test marked README examples against an npm package in a fresh directory.",
+  "type": "module",
+  "bin": {
+    "readme-trial": "src/cli.js"
+  },
+  "exports": "./src/index.js",
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "trial:self": "node src/cli.js --package ./ashkobo-readme-trial-0.1.0.tgz --readme README.md",
+    "trial:demo": "node src/cli.js --package japan-mcp@0.1.1 --readme examples/japan-mcp.md"
+  },
+  "keywords": [
+    "readme",
+    "documentation",
+    "testing",
+    "npm",
+    "smoke-test",
+    "github-actions"
+  ],
+  "author": "Ash",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashkobo/readme-trial.git"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15"
+  }
+}
