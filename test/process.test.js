@@ -10,7 +10,11 @@ import { cleanEnvironment, runProcess } from "../src/process.js";
 test("output floods are bounded and fail the process", async () => {
   const result = await runProcess(
     process.execPath,
-    ["-e", "while (true) process.stdout.write('x'.repeat(65536));"],
+    [
+      "-e",
+      "const { writeSync } = require('node:fs'); " +
+        "const chunk = Buffer.alloc(65536, 120); while (true) writeSync(1, chunk);",
+    ],
     { cwd: process.cwd(), env: cleanEnvironment(), timeout: 10000 },
   );
   assert.equal(result.ok, false);
