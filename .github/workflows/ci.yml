@@ -23,6 +23,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run lint
       - run: npm test
+      - run: npm run verify:package
       - run: npm pack --ignore-scripts
       - name: Test the packaged API from the README
         run: >-

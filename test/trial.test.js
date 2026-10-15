@@ -165,3 +165,31 @@ test("an invalid package archive reports an install failure without running exam
   assert.equal(report.install.ok, false);
   assert.deepEqual(report.examples, []);
 });
+
+test("pack mode checks the tarball, not files or install hooks in the checkout", async () => {
+  const directory = join(root, "package with spaces");
+  const report = await runTrial({ packDirectory: directory, readme, only: ["esm", "cjs"] });
+  assert.equal(report.ok, true, report.install.stderr);
+  assert.equal(report.pack.ok, true);
+  const broken = await runTrial({ packDirectory: directory, readme, only: ["missing-export"] });
+  assert.equal(broken.ok, false);
+  assert.match(broken.examples[0].stderr, /ERR_MODULE_NOT_FOUND/);
+  await assert.rejects(
+    runTrial({ packageSpec: tarball, packDirectory: directory, readme }),
+    /not both/,
+  );
+});
+
+test("CLI pack mode needs neither a tarball name nor a second pack command", async () => {
+  const result = await runProcess(
+    process.execPath,
+    [resolve("src/cli.js"), "--pack", "--readme", readme, "--only", "esm"],
+    {
+      cwd: join(root, "package with spaces"),
+      env: cleanEnvironment(),
+      timeout: 30000,
+    },
+  );
+  assert.equal(result.ok, true, result.stderr);
+  assert.match(result.stdout, /PASS esm/);
+});

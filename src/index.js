@@ -5,7 +5,7 @@
 
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { isAbsolute, join, resolve } from "node:path";
+import { basename, isAbsolute, join, resolve } from "node:path";
 import { extractExamples } from "./markdown.js";
 import { cleanEnvironment, findNpmCli, runProcess } from "./process.js";
 
@@ -17,12 +17,16 @@ export { extractExamples } from "./markdown.js";
 /** Run trusted README snippets against a registry package or local .tgz, not a checkout. */
 export async function runTrial({
   packageSpec,
+  packDirectory,
   readme = "README.md",
   only = [],
   timeout = 10000,
   installTimeout = 120000,
 }) {
-  if (!packageSpec || packageSpec.startsWith("-")) throw new Error("A package spec is required.");
+  if (Boolean(packageSpec) === Boolean(packDirectory)) {
+    throw new Error("Choose a package spec or a directory to pack, not both.");
+  }
+  if (packageSpec?.startsWith("-")) throw new Error("A package spec is required.");
   for (const value of [timeout, installTimeout]) {
     if (!Number.isSafeInteger(value) || value <= 0 || value > 2147483647) {
       throw new Error("Timeouts must be positive integers up to 2147483647.");
@@ -39,7 +43,7 @@ export async function runTrial({
     : examples;
   if (!selected.length)
     throw new Error("No marked examples found. Add <!-- readme-trial: name -->.");
-  const spec = await resolvePackageSpec(packageSpec);
+  let spec = packageSpec ? await resolvePackageSpec(packageSpec) : null;
   const npmCli = findNpmCli();
   const root = await mkdtemp(join(tmpdir(), "readme-trial-"));
   try {
@@ -49,6 +53,35 @@ export async function runTrial({
     await writeFile(userconfig, "");
     await writeFile(globalconfig, "");
     await writeFile(join(root, "package.json"), JSON.stringify({ private: true }));
+    const npmOptions = [
+      "--userconfig",
+      userconfig,
+      "--globalconfig",
+      globalconfig,
+      "--cache",
+      join(root, "cache"),
+    ];
+    let pack;
+    if (packDirectory) {
+      pack = await runProcess(
+        process.execPath,
+        [npmCli, "pack", "--json", "--ignore-scripts", "--pack-destination", root, ...npmOptions],
+        {
+          cwd: resolve(packDirectory),
+          env: environment,
+          timeout: installTimeout,
+        },
+      );
+      if (!pack.ok)
+        throw new Error(
+          `npm pack failed: ${pack.stderr || pack.spawnError || "check the build output"}`,
+        );
+      const filename = JSON.parse(pack.stdout)[0]?.filename;
+      if (!filename || basename(filename) !== filename || !filename.endsWith(".tgz")) {
+        throw new Error("npm pack did not return a valid tarball filename.");
+      }
+      spec = join(root, filename);
+    }
     const install = await runProcess(
       process.execPath,
       [
@@ -60,16 +93,18 @@ export async function runTrial({
         "--no-fund",
         "--package-lock=false",
         "--omit=dev",
-        "--userconfig",
-        userconfig,
-        "--globalconfig",
-        globalconfig,
-        "--cache",
-        join(root, "cache"),
+        ...npmOptions,
       ],
       { cwd: root, env: environment, timeout: installTimeout },
     );
-    const report = { packageSpec, readme, ok: false, install, examples: [] };
+    const report = {
+      packageSpec: packageSpec ?? `pack:${resolve(packDirectory)}`,
+      ...(pack && { pack }),
+      readme,
+      ok: false,
+      install,
+      examples: [],
+    };
     if (!install.ok) return report;
     for (const [index, example] of selected.entries()) {
       // Each example gets its own cwd, sharing only the installed package dependencies.

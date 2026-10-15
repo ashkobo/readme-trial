@@ -14,10 +14,12 @@ const help = `readme-trial — test README examples against an npm package
 Usage:
   readme-trial --package package@version [--readme README.md]
   readme-trial --package ./package.tgz [--only example-name]
+  readme-trial --pack [--readme README.md]
   readme-trial --list [--readme README.md]
 
 Options:
   --package SPEC         Registry package or local npm pack tarball
+  --pack                 Pack the current directory and test its real tarball
   --readme FILE          README to read (default: README.md)
   --only NAME            Run one marked example (repeatable)
   --timeout MS           Per-example timeout (default: 10000)
@@ -34,6 +36,7 @@ try {
   const { values } = parseArgs({
     options: {
       package: { type: "string" },
+      pack: { type: "boolean" },
       readme: { type: "string", default: "README.md" },
       only: { type: "string", multiple: true, default: [] },
       timeout: { type: "string", default: "10000" },
@@ -53,6 +56,7 @@ try {
   } else {
     const report = await runTrial({
       packageSpec: values.package,
+      packDirectory: values.pack ? process.cwd() : undefined,
       readme: values.readme,
       only: values.only,
       timeout: positiveInteger(values.timeout, "timeout"),

@@ -59,3 +59,28 @@ test("invalid markers fail instead of silently skipping an intended check", () =
   ])
     assert.throws(() => extractExamples(markdown));
 });
+
+test("malformed markers fail even when another example is valid", () => {
+  const valid = "<!-- readme-trial: valid -->\n```js\nconsole.log(1);\n```\n";
+  for (const marker of [
+    "<!-- readme-trial: bad/name -->",
+    "<!-- readme-trial: -->",
+    "<!-- readme-trial: two words -->",
+    "<!-- readme-trial: broken",
+    "<!-- README-TRIAL: case -->",
+  ]) {
+    assert.throws(
+      () => extractExamples(`${valid}${marker}\n\x60\x60\x60js\nthrow 1;\n\x60\x60\x60`),
+      /Invalid readme-trial marker/,
+    );
+  }
+});
+
+test("empty or whitespace-only marked fences cannot pass as a check", () => {
+  for (const body of ["", "\n", "   \n\t"]) {
+    assert.throws(
+      () => extractExamples(`<!-- readme-trial: empty -->\n\x60\x60\x60js\n${body}\n\x60\x60\x60`),
+      /empty code fence/,
+    );
+  }
+});

@@ -16,6 +16,9 @@ export function extractExamples(markdown) {
       const close = line.match(/^ {0,3}(`+|~+)\s*$/);
       if (close && close[1][0] === fence.char && close[1].length >= fence.length) {
         if (fence.name) {
+          if (!fence.code.join("\n").trim()) {
+            throw new Error(`Example '${fence.name}' has an empty code fence.`);
+          }
           examples.push({
             name: fence.name,
             language: fence.language,
@@ -36,6 +39,11 @@ export function extractExamples(markdown) {
       pending = marker[1];
       names.add(pending);
       continue;
+    }
+    if (/^\s*<!--\s*readme-trial\b/i.test(line)) {
+      throw new Error(
+        `Invalid readme-trial marker on line ${index + 1}. Use a name with A-Z, 0-9, _ or -.`,
+      );
     }
     const open = line.match(/^ {0,3}(`{3,}|~{3,})([^`~]*)$/);
     if (open) {

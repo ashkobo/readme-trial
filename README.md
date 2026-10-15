@@ -23,11 +23,28 @@ No runtime dependencies. No AI API. Node.js 22 or later and npm required.
 
 ## Quick start
 
-This project is not published yet. From a local checkout:
+Requires Node.js 22+ and npm. The npm package is `@ashkobo/readme-trial`.
+Once the npm release is available, run this from your package's directory:
+
+```sh
+npx -y @ashkobo/readme-trial --pack
+```
+
+The GitHub source is also usable independently of npm publication. From a local checkout:
 
 ```sh
 node src/cli.js --package your-package@1.2.3 --readme ../your-package/README.md
 ```
+
+To check a local package before release, run this from that package's directory:
+
+```sh
+node ../readme-trial/src/cli.js --pack
+```
+
+`--pack` runs `npm pack --ignore-scripts` into a temporary directory, installs the tarball,
+and checks the marked examples in your `README.md`. Build your package first if it needs a
+build step. Your checkout is never installed as a directory link, and no tarball is left in it.
 
 In the package's README, place a marker directly before an existing example:
 
@@ -71,6 +88,7 @@ you select, not automatically from the installed package.
 | --- | --- |
 | `--package SPEC` | Public registry name with optional version/tag, or a local `.tgz` |
 | `--readme FILE` | README path; default `README.md` |
+| `--pack` | Pack the current directory and check its tarball; use instead of `--package` |
 | `--only NAME` | Select a marked example; repeat to select more |
 | `--list` | List example names and source lines without executing anything |
 | `--timeout MS` | Per-example timeout; default 10,000 ms |
@@ -79,10 +97,11 @@ you select, not automatically from the installed package.
 
 Exit code: `0` for success, `1` for a failed example, installation, or invalid input.
 No marked examples is an error, so an accidentally empty check cannot turn green.
+Malformed markers and empty marked code blocks are errors even when other examples are valid.
 
 ## GitHub Actions
 
-While the tool is unpublished, pin a reviewed commit of this repository:
+Pin a reviewed commit of this repository:
 
 ```yaml
 permissions:
@@ -105,9 +124,8 @@ steps:
       --readme README.md --json trial-report.json
 ```
 
-The repository and package are being prepared locally; the checkout example will become
-usable after the first public release. The project's own CI tests Windows, macOS and Linux
-on Node.js 22 and 24, then tests this README against its packed API.
+Replace `<reviewed-commit-sha>` with a commit you reviewed. The project's own CI tests Windows,
+macOS and Linux on Node.js 22 and 24, then tests this README against its packed API.
 
 ## API
 
@@ -131,10 +149,27 @@ assert.equal(example.code, 'console.log("hello");');
 console.log("README extraction works from the installed package.");
 ```
 
-`runTrial({ packageSpec, readme, only, timeout, installTimeout })` returns a report with
+`runTrial({ packageSpec, packDirectory, readme, only, timeout, installTimeout })` returns a report with
 `ok`, `install`, and `examples`. Each process result includes its exit code, duration,
 stdout, stderr, timeout status, and output-limit status. Invalid inputs throw; install or
-example failures are returned in the report.
+example failures are returned in the report. Use either `packageSpec` or `packDirectory`.
+With `packDirectory`, the report also includes the `pack` process result.
+
+## When to choose this
+
+Use it when you maintain an npm library and want release CI to catch examples that only work
+inside your checkout: unpublished files, undeclared dependencies, or an outdated import path.
+
+| Need | Tool to consider |
+| --- | --- |
+| Execute selected JS/CJS examples against a real npm tarball or registry version | readme-trial |
+| Lint package entry points and export conditions without executing README examples | [publint](https://publint.dev/docs/cli) |
+| Execute JS/TS markdown and validate rendered output | [evaldown](https://github.com/alexjeffburke/evaldown) |
+| A broader release pipeline including pack, smoke and documentation checks | [checkride](https://github.com/robmclarty/checkride) |
+
+Printing an incorrect answer still passes unless you assert it. This is for trusted Node
+examples, not shell tutorials, browser examples, a security sandbox, or every Markdown dialect.
+See [MAINTENANCE.md](MAINTENANCE.md) for release checks and supported scope.
 
 ## Execution boundaries
 
@@ -165,5 +200,8 @@ npm test
 Tests use real locally packed npm fixtures, including missing exports, missing dependencies,
 CommonJS, disabled install scripts, CLI exit codes and timeouts. No registry download is
 needed for the fixture tests.
+
+`npm run demo` shows extraction and rejection of invalid examples. `npm run verify:package`
+installs the packed tool into a temporary consumer and checks its API and CLI without a publish.
 
 MIT · [Ash](https://github.com/ashkobo)

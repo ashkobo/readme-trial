@@ -8,7 +8,8 @@
   },
   "exports": "./src/index.js",
   "files": [
-    "src"
+    "src",
+    "MAINTENANCE.md"
   ],
   "engines": {
     "node": ">=22"
@@ -18,7 +19,9 @@
     "lint": "biome check .",
     "format": "biome check --write .",
     "trial:self": "node src/cli.js --package ./ashkobo-readme-trial-0.1.0.tgz --readme README.md",
-    "trial:demo": "node src/cli.js --package japan-mcp@0.1.1 --readme examples/japan-mcp.md"
+    "trial:demo": "node src/cli.js --package japan-mcp@0.1.1 --readme examples/japan-mcp.md",
+    "demo": "node examples/demo.js",
+    "verify:package": "node scripts/verify-package.js"
   },
   "keywords": [
     "readme",
@@ -29,6 +32,8 @@
     "github-actions"
   ],
   "author": "Ash",
+  "homepage": "https://github.com/ashkobo/readme-trial#readme",
+  "bugs": "https://github.com/ashkobo/readme-trial/issues",
   "license": "MIT",
   "repository": {
     "type": "git",
